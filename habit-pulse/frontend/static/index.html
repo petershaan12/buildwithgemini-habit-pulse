@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HabitPulse - Daily Wellness & Virtual Companion</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="alternate icon" href="favicon.svg">
 <!-- Google Fonts & Material Symbols -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -324,7 +326,9 @@
 
 <header>
   <div class="brand-group">
-    <div class="mascot-avatar" title="Sprout Mascot">🌱</div>
+    <div class="mascot-avatar" title="Sprout Mascot">
+      <img src="mascot.svg" alt="Sprout" style="width: 32px; height: 32px; display: block;" />
+    </div>
     <div>
       <h1 class="brand-title">HabitPulse</h1>
       <p class="brand-subtitle">Your Gamified Wellness & Pet Companion</p>
@@ -338,7 +342,9 @@
 
 <div id="log">
   <div class="msg agent">
-    <span class="sender-tag">Sprout 🌿</span>
+    <span class="sender-tag" style="display:inline-flex; align-items:center; gap:0.3rem;">
+      <img src="favicon.svg" alt="Sprout Icon" style="width:16px; height:16px; vertical-align:middle;" /> Sprout
+    </span>
     <div class="bubble">Welcome back! I'm Sprout, your habit companion. What daily routine or wellness goal are we tackling today?</div>
   </div>
 </div>
@@ -374,7 +380,22 @@ function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.
 
 function bubble(who) {
   const m = el("div", "msg " + who);
-  const tag = el("span", "sender-tag", who === "user" ? "You" : "Sprout 🌿");
+  const tag = el("span", "sender-tag");
+  if (who === "user") {
+    tag.textContent = "You";
+  } else {
+    tag.style.display = "inline-flex";
+    tag.style.alignItems = "center";
+    tag.style.gap = "0.3rem";
+    const icon = el("img");
+    icon.src = "favicon.svg";
+    icon.alt = "Sprout";
+    icon.style.width = "16px";
+    icon.style.height = "16px";
+    icon.style.verticalAlign = "middle";
+    tag.appendChild(icon);
+    tag.appendChild(document.createTextNode("Sprout"));
+  }
   const b = el("div", "bubble");
   m.appendChild(tag);
   m.appendChild(b);

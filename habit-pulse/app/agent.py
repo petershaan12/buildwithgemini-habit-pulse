@@ -262,6 +262,87 @@ async def generate_item_image(item_description: str, tool_context: ToolContext) 
     }
 
 
+async def generate_item_video(item_description: str, tool_context: ToolContext) -> Dict[str, Any]:
+    """Generates a short animated video for a habit milestone, routine victory, or mascot reaction using Google's Omni model (gemini-omni-flash-preview) in the global region.
+    Saves the video artifact for the Playground UI and uploads it to public Cloud Storage.
+
+    Args:
+        item_description: Description of the mascot action or habit milestone animation (e.g. 'A cute sprout mascot celebrating drinking a glass of water, smiling and jumping with joy').
+        tool_context: ADK ToolContext to register the artifact in the dev UI / playground.
+
+    Returns:
+        A dictionary containing the public GCS video URL and artifact filename.
+    """
+    import base64
+    import google.auth
+    import google.auth.transport.requests
+
+    credentials, _ = google.auth.default()
+    auth_req = google.auth.transport.requests.Request()
+    credentials.refresh(auth_req)
+
+    url = f"https://aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/global/interactions"
+    headers = {
+        "Authorization": f"Bearer {credentials.token}",
+        "Content-Type": "application/json; charset=utf-8"
+    }
+    
+    prompt_text = f"Cute 3D animation, soft lighting, pastel colors, cheerful mascot: {item_description}"
+    payload = {
+        "model": "gemini-omni-flash-preview",
+        "input": [
+            {"type": "text", "text": prompt_text}
+        ],
+        "response_format": [
+            {"type": "video", "aspect_ratio": "16:9", "resolution": "720p", "duration": "5s"}
+        ],
+        "generation_config": {
+            "video_config": {
+                "task": "text_to_video"
+            }
+        }
+    }
+
+    resp = requests.post(url, headers=headers, json=payload, timeout=90)
+    if resp.status_code != 200:
+        return {"status": "error", "message": f"Video generation failed: {resp.text}"}
+
+    res_json = resp.json()
+    video_bytes = None
+    mime_type = "video/mp4"
+
+    for step in res_json.get("steps", []):
+        if step.get("type") == "model_output" and "content" in step:
+            for item in step["content"]:
+                if item.get("type") == "video" and item.get("data"):
+                    video_bytes = base64.b64decode(item["data"])
+                    mime_type = item.get("mime_type", "video/mp4")
+                    break
+
+    if not video_bytes:
+        return {"status": "error", "message": "No video data returned from model."}
+
+    # 1. Save artifact in ADK tool context for the Playground's Artifacts panel
+    filename = f"mascot_video_{uuid.uuid4().hex[:8]}.mp4"
+    artifact_part = types.Part.from_bytes(data=video_bytes, mime_type=mime_type)
+    await tool_context.save_artifact(filename=filename, artifact=artifact_part)
+
+    # 2. Upload bytes to public Cloud Storage bucket
+    storage_client = get_storage_client()
+    bucket = storage_client.bucket(BUCKET_NAME)
+    blob = bucket.blob(filename)
+    blob.upload_from_string(video_bytes, content_type=mime_type)
+
+    public_url = f"https://storage.googleapis.com/{BUCKET_NAME}/{filename}"
+
+    return {
+        "status": "success",
+        "filename": filename,
+        "public_url": public_url,
+        "description": item_description
+    }
+
+
 # WRITE callback: Send session turns to Memory Bank for extraction
 async def generate_memories_callback(callback_context: CallbackContext):
     await callback_context.add_session_to_memory()
@@ -331,6 +412,7 @@ root_agent = Agent(
         get_rewards_and_achievements,
         get_daily_inspiration_quote,
         generate_item_image,
+        generate_item_video,
     ],
     code_executor=sandbox_executor,
     after_model_callback=a2ui_callback,
@@ -338,16 +420,7 @@ root_agent = Agent(
 )
 
 
-def memory_service_builder():
-    return VertexAiMemoryBankService(
-        project=PROJECT_ID,
-        location=LOCATION,
-        agent_engine_id=MEMORY_BANK_ID,
-    )
-
-
 app = App(
-    root_agent=root_agent,
     name="app",
-    memory_service_builder=memory_service_builder,
+    root_agent=root_agent,
 )

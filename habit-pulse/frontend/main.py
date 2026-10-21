@@ -112,28 +112,92 @@ async def _get_card(client: httpx.AsyncClient) -> AgentCard:
     return _card
 
 
-def _extract_parts(parts: list) -> list[dict]:
-    """Turn A2A response parts into structured parts for the chat UI.
+import json
+import re
 
-    Text parts pass through as {"kind": "text"}. A2UI data parts (tagged
-    application/json+a2ui) become {"kind": "a2ui", "data": <message>} so the UI
-    renders the card; each data part is one A2UI message (beginRendering or
-    surfaceUpdate).
-    """
+
+def _extract_single_part(item) -> list[dict]:
+    """Extract structured UI or text parts from a single part object/dict."""
+    res = []
+    if not item:
+        return res
+    root = getattr(item, "root", item)
+
+    # 1. Text extraction & embedded A2UI tags unwrapping
+    text_val = None
+    if isinstance(root, str):
+        text_val = root
+    elif hasattr(root, "text") and isinstance(root.text, str):
+        text_val = root.text
+    elif isinstance(root, dict) and "text" in root and isinstance(root["text"], str):
+        text_val = root["text"]
+
+    if text_val is not None:
+        text_val = text_val.strip()
+        if "<a2a_datapart_json>" in text_val:
+            for match in re.finditer(r"<a2a_datapart_json>(.*?)</a2a_datapart_json>", text_val, re.DOTALL):
+                try:
+                    payload = json.loads(match.group(1))
+                    if isinstance(payload, dict):
+                        inner = payload.get("data")
+                        if isinstance(inner, dict):
+                            res.append({"kind": "a2ui", "data": inner})
+                        elif any(k in payload for k in ("beginRendering", "surfaceUpdate", "dataModelUpdate", "deleteSurface")):
+                            res.append({"kind": "a2ui", "data": payload})
+                except Exception:
+                    pass
+            cleaned_text = re.sub(r"<a2a_datapart_json>.*?</a2a_datapart_json>", "", text_val, flags=re.DOTALL).strip()
+            if cleaned_text:
+                res.append({"kind": "text", "text": cleaned_text})
+        elif text_val:
+            if text_val.startswith("{") or text_val.startswith("["):
+                try:
+                    parsed = json.loads(text_val)
+                    if isinstance(parsed, list):
+                        for el in parsed:
+                            if isinstance(el, dict) and any(k in el for k in ("beginRendering", "surfaceUpdate", "dataModelUpdate", "deleteSurface")):
+                                res.append({"kind": "a2ui", "data": el})
+                    elif isinstance(parsed, dict) and any(k in parsed for k in ("beginRendering", "surfaceUpdate", "dataModelUpdate", "deleteSurface")):
+                        res.append({"kind": "a2ui", "data": parsed})
+                except Exception:
+                    pass
+            if not res:
+                res.append({"kind": "text", "text": text_val})
+        return res
+
+    # 2. Data part extraction
+    data_val = getattr(root, "data", None)
+    if data_val is None and isinstance(root, dict):
+        data_val = root.get("data")
+    if data_val is not None:
+        if isinstance(data_val, str):
+            try:
+                data_val = json.loads(data_val)
+            except Exception:
+                pass
+        if isinstance(data_val, dict):
+            inner = data_val.get("data")
+            if isinstance(inner, dict):
+                res.append({"kind": "a2ui", "data": inner})
+            else:
+                res.append({"kind": "a2ui", "data": data_val})
+            return res
+
+    # 3. File / image URI extraction
+    file_val = getattr(root, "file", None) or (root.get("file") if isinstance(root, dict) else None)
+    uri = getattr(file_val, "uri", None) or (file_val.get("uri") if isinstance(file_val, dict) else None)
+    if uri:
+        res.append({"kind": "text", "text": uri})
+        return res
+
+    return res
+
+
+def _extract_parts(parts: list) -> list[dict]:
+    """Turn A2A response parts into structured parts for the chat UI."""
     out: list[dict] = []
-    for p in parts:
-        root = getattr(p, "root", p)
-        if isinstance(root, TextPart) and getattr(root, "text", None):
-            out.append({"kind": "text", "text": root.text})
-        elif getattr(root, "data", None) is not None:
-            meta = getattr(root, "metadata", None) or {}
-            mime = meta.get("mimeType") if isinstance(meta, dict) else None
-            if mime == _A2UI_MIME:
-                out.append({"kind": "a2ui", "data": root.data})
-        elif isinstance(root, FilePart):
-            uri = getattr(getattr(root, "file", None), "uri", None)
-            if uri:
-                out.append({"kind": "text", "text": uri})
+    for p in parts or []:
+        out.extend(_extract_single_part(p))
     return out
 
 
@@ -167,25 +231,59 @@ async def chat(req: Request):
         last_task = None
         got_artifact_update = False
         async for event in a2a_client.send_message(msg):
-            if not isinstance(event, tuple):
-                continue
-            task, update = event
+            task = None
+            update = None
+            if isinstance(event, tuple):
+                if len(event) >= 1:
+                    task = event[0]
+                if len(event) >= 2:
+                    update = event[1]
+            elif isinstance(event, Message):
+                update = event
+            else:
+                task = event
+
             if task is not None:
                 last_task = task
                 if getattr(task, "context_id", None):
                     _contexts[user_id] = task.context_id
-            if isinstance(update, TaskArtifactUpdateEvent):
-                got_artifact_update = True
-                parts.extend(_extract_parts(update.artifact.parts))
+                elif getattr(task, "contextId", None):
+                    _contexts[user_id] = task.contextId
 
-        # Non-streaming fallback: pull parts from the final task's artifacts.
-        if not got_artifact_update and last_task is not None:
+            if isinstance(update, TaskArtifactUpdateEvent) and getattr(update, "artifact", None):
+                got_artifact_update = True
+                parts.extend(_extract_parts(getattr(update.artifact, "parts", [])))
+            elif getattr(update, "status", None):
+                status_msg = getattr(update.status, "message", None)
+                if status_msg and getattr(status_msg, "parts", None):
+                    parts.extend(_extract_parts(status_msg.parts))
+            elif isinstance(update, Message) and getattr(update, "parts", None):
+                parts.extend(_extract_parts(update.parts))
+
+        # Non-streaming fallbacks:
+        if not parts and last_task is not None:
             for artifact in getattr(last_task, "artifacts", None) or []:
-                parts.extend(_extract_parts(artifact.parts))
+                parts.extend(_extract_parts(getattr(artifact, "parts", [])))
+
+        if not parts and last_task is not None:
+            status = getattr(last_task, "status", None)
+            if status:
+                status_msg = getattr(status, "message", None)
+                if status_msg and getattr(status_msg, "parts", None):
+                    parts.extend(_extract_parts(status_msg.parts))
+
+        if not parts and last_task is not None:
+            history = getattr(last_task, "history", None) or []
+            for item in reversed(history):
+                role = getattr(item, "role", None) or (item.get("role") if isinstance(item, dict) else None)
+                if role in ("agent", "model", "assistant"):
+                    item_parts = getattr(item, "parts", None) or (item.get("parts") if isinstance(item, dict) else [])
+                    extracted = _extract_parts(item_parts)
+                    if extracted:
+                        parts.extend(extracted)
+                        break
 
     if not parts:
-        # The turn produced no text or UI (e.g. the agent only ran tools, or a
-        # tool stalled). Be honest rather than silent.
         parts = [{"kind": "text", "text": "(The agent didn't return a reply.)"}]
     return JSONResponse({"parts": parts})
 

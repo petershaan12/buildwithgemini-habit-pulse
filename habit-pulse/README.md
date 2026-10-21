@@ -2,9 +2,17 @@
 
 # 🌱 HabitPulse
 
-### An intelligent habit and wellness companion with a virtual pet mascot, long-term memory, and dynamic visual rewards.
+### An intelligent habit and wellness companion with a virtual pet mascot, long-term memory, dynamic visual rewards, and live A2UI surfaces.
 
-Built with **Google ADK**, **Gemini 3.8 Flash**, **Vertex AI Memory Bank**, **Firestore**, **Cloud Storage**, and **A2UI**.
+[![Live Demo](https://img.shields.io/badge/Demo-Live%20on%20Cloud%20Run-brightgreen?style=for-the-badge&logo=googlecloud)](https://habit-pulse-frontend-1022414314284.us-east1.run.app)
+[![ADK](https://img.shields.io/badge/ADK-v1.4.0-blue?style=for-the-badge)](https://github.com/google/agent-development-kit)
+[![Model](https://img.shields.io/badge/Gemini-3.8%20Flash-orange?style=for-the-badge&logo=google)](https://cloud.google.com/vertex-ai)
+
+**🌐 Live Service URL:** [https://habit-pulse-frontend-1022414314284.us-east1.run.app](https://habit-pulse-frontend-1022414314284.us-east1.run.app)
+
+<br/>
+
+<img src="../assets/demo.gif" alt="HabitPulse Interactive Demo" width="85%" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);" />
 
 </div>
 
@@ -12,7 +20,7 @@ Built with **Google ADK**, **Gemini 3.8 Flash**, **Vertex AI Memory Bank**, **Fi
 
 ## 📖 Overview
 
-**HabitPulse** transforms daily habit tracking into an engaging, conversational, and rewarding experience. Instead of static checklists, users interact with **Sprout**, a cheerful wellness companion that remembers personal routines across sessions, tracks habit completions and streaks in Firestore, celebrates milestones with generated 3D badges uploaded to Cloud Storage, and returns rich A2UI cards.
+**HabitPulse** transforms daily habit tracking into an engaging, conversational, and rewarding experience. Users interact with **Sprout**, a cheerful wellness companion that remembers personal routines across sessions, tracks habit completions and streaks in Firestore, celebrates milestones with generated 3D badges uploaded to Cloud Storage, and returns rich A2UI cards.
 
 ---
 
@@ -58,11 +66,13 @@ Built with **Google ADK**, **Gemini 3.8 Flash**, **Vertex AI Memory Bank**, **Fi
 
 ---
 
-## 🔮 Roadmap (Planned, Not Yet Implemented)
+## ☁️ Cloud Run Deployment
 
-- [ ] **Coin Economy & Accessory Wardrobe**: Virtual coin shop to equip accessories and cosmetics on Sprout.
-- [ ] **Multi-stage Mascot Evolution**: Visual progression stages as cumulative XP reaches high tiers.
-- [ ] **Automated Push Reminders**: Scheduled Cloud Run / Cloud Scheduler cron reminders for daily routines.
+The web frontend is deployed to **Google Cloud Run**:
+- **Service**: `habit-pulse-frontend`
+- **Region**: `us-east1`
+- **Live Endpoint**: [https://habit-pulse-frontend-1022414314284.us-east1.run.app](https://habit-pulse-frontend-1022414314284.us-east1.run.app)
+- **Backend Reason Engine Resource**: `projects/1022414314284/locations/us-east1/reasoningEngines/7204328939165057024`
 
 ---
 
@@ -88,11 +98,11 @@ To run the interactive web dashboard:
 ```bash
 cd frontend
 pip install -r requirements.txt
-export AGENT_ENGINE_RESOURCE_NAME="projects/<PROJECT_ID>/locations/<LOCATION>/reasoningEngines/<REASONING_ENGINE_ID>"
+export AGENT_ENGINE_RESOURCE_NAME="projects/1022414314284/locations/us-east1/reasoningEngines/7204328939165057024"
 export AGENT_DIRECTORY="app"
 python main.py
 ```
-Open your web browser and navigate to the local address output by the server (typically `127.0.0.1:8080`).
+Open your web browser and navigate to `http://localhost:8080`.
 
 ---
 
