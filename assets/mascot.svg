@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bodyGradBig" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34D399" />
+      <stop offset="50%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <linearGradient id="leafGradBig" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6EE7B7" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <linearGradient id="potGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FCD34D" />
+      <stop offset="100%" stop-color="#F59E0B" />
+    </linearGradient>
+    <radialGradient id="auraGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#6EE7B7" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#10B981" stop-opacity="0" />
+    </radialGradient>
+    <filter id="bigShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#064E3B" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+  <!-- Aura Glow -->
+  <circle cx="64" cy="68" r="54" fill="url(#auraGrad)" />
+
+  <!-- Dual Leaves on Top -->
+  <path d="M64 42 Q64 18 82 14 Q90 28 68 44 Z" fill="url(#leafGradBig)" filter="url(#bigShadow)" />
+  <path d="M64 42 Q60 22 46 18 Q40 30 60 44 Z" fill="url(#leafGradBig)" />
+
+  <!-- Main Mascot Body (Cute Rounded Bean) -->
+  <ellipse cx="64" cy="74" rx="38" ry="34" fill="url(#bodyGradBig)" filter="url(#bigShadow)" />
+
+  <!-- Soft Highlight Shine -->
+  <ellipse cx="52" cy="56" rx="10" ry="6" fill="#FFFFFF" opacity="0.45" transform="rotate(-20 52 56)" />
+
+  <!-- Left Eye -->
+  <ellipse cx="51" cy="72" rx="5.5" ry="7" fill="#064E3B" />
+  <circle cx="49" cy="69" r="2.5" fill="#FFFFFF" />
+  <circle cx="53" cy="74" r="1" fill="#FFFFFF" />
+
+  <!-- Right Eye -->
+  <ellipse cx="77" cy="72" rx="5.5" ry="7" fill="#064E3B" />
+  <circle cx="75" cy="69" r="2.5" fill="#FFFFFF" />
+  <circle cx="79" cy="74" r="1" fill="#FFFFFF" />
+
+  <!-- Blushing Cheeks -->
+  <ellipse cx="42" cy="80" rx="5" ry="3" fill="#F43F5E" opacity="0.65" />
+  <ellipse cx="86" cy="80" rx="5" ry="3" fill="#F43F5E" opacity="0.65" />
+
+  <!-- Joyful Curved Smile -->
+  <path d="M58 80 Q64 88 70 80" stroke="#064E3B" stroke-width="3" stroke-linecap="round" fill="none" />
+
+  <!-- Tiny Cute Hands / Buds -->
+  <ellipse cx="32" cy="78" rx="4" ry="3" fill="#34D399" opacity="0.9" />
+  <ellipse cx="96" cy="78" rx="4" ry="3" fill="#34D399" opacity="0.9" />
+</svg>

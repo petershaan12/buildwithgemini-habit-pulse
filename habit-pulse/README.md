@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🌱 HabitPulse
+<img src="../assets/mascot.svg" alt="Sprout Mascot" width="110" />
+
+# HabitPulse
 
 ### An intelligent habit and wellness companion with a virtual pet mascot, long-term memory, dynamic visual rewards, and live A2UI surfaces.
 
